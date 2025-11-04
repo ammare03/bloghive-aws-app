@@ -37,4 +37,4 @@ spec:
           imagePullPolicy: Always
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "http://api-gateway-service:80"
+              value: "http://a46b83203b8934d95acfa0263b23040e-140158648.us-east-1.elb.amazonaws.com"
