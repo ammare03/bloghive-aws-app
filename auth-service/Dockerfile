@@ -1,5 +1,5 @@
 # Stage 1: Build the application using Maven
-FROM public.ecr.aws/maven/maven:3.9-eclipse-temurin-17 AS build
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
 # Copy the Maven wrapper files first
@@ -18,7 +18,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests
 
 # Stage 2: Create the final image using a slim JRE
-FROM public.ecr.aws/eclipse-temurin/temurin:17-jre-jammy
+FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 # Copy the built JAR file from the build stage
