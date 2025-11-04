@@ -1,5 +1,5 @@
 # Stage 1: Build the Next.js application
-FROM node:20-alpine AS build
+FROM public.ecr.aws/docker/library/node:20-alpine AS build
 WORKDIR /app
 
 # --- npm ---
@@ -23,7 +23,7 @@ RUN npm run build
 RUN npm prune --production
 
 # Stage 2: Create the final production image
-FROM node:20-alpine AS runner
+FROM public.ecr.aws/docker/library/node:20-alpine AS runner
 WORKDIR /app
 
 # Create a non-root user for security
