@@ -1,50 +1,52 @@
-# Stage 1: Build the Next.js application
+# ---------- Stage 1: Build the Next.js application ----------
 FROM public.ecr.aws/docker/library/node:20-alpine AS build
 WORKDIR /app
 
-# --- npm ---
-COPY package.json package-lock.json* ./
-RUN npm install --frozen-lockfile
-# --- End npm ---
+# Copy dependency manifests and install dependencies
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Copy the rest of the application code
+# Copy the rest of the app source
 COPY . .
 
-# Set NEXT_PUBLIC_API_URL build argument
-# Default value can be overridden during docker build
-ARG NEXT_PUBLIC_API_URL=http://localhost:8081
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# --- ✅ Build argument and environment variable setup ---
+# Accept build-time argument (injected by CodeBuild)
+ARG NEXT_PUBLIC_API_URL
+# Export it so Next.js sees it at build time
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-# Build the Next.js application
-# Use the build script defined in your package.json
+# Log to verify it's being picked up (optional)
+RUN echo "Building with NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
+
+# Build the Next.js app (this will embed NEXT_PUBLIC_API_URL)
 RUN npm run build
 
-# Remove development dependencies
+# Prune dev dependencies to keep the image light
 RUN npm prune --production
 
-# Stage 2: Create the final production image
+
+# ---------- Stage 2: Create the final production image ----------
 FROM public.ecr.aws/docker/library/node:20-alpine AS runner
 WORKDIR /app
 
-# Create a non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
-# Copy necessary files from the build stage
+# Copy production build output
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Set user to the non-root user
-USER nextjs
-
-# Expose the port Next.js runs on (default 3000)
+# Expose port
 EXPOSE 3000
 
-# Set the HOSTNAME environment variable for Next.js server
-ENV HOSTNAME "0.0.0.0"
-ENV PORT 3000
+# Environment defaults for runtime
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-# Command to run the Next.js application in production mode
-# This uses the Node.js server built into Next.js standalone output
+# Switch to non-root user
+USER nextjs
+
+# Start the Next.js standalone server
 CMD ["node", "server.js"]
